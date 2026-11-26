@@ -1,0 +1,35 @@
+# Local cluster: 1 control plane + 2 workers.
+# The second worker stands in for a GPU node: it is labelled and tainted like one,
+# so only workloads that ask for it are scheduled there.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: rcp
+nodes:
+  - role: control-plane
+    labels:
+      ingress-ready: "true"
+    # Port mappings can't be added after the cluster exists, so they are set up now for the ingress controller.
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+
+  - role: worker
+    labels:
+      node-pool: general
+
+  - role: worker
+    labels:
+      node-pool: gpu
+      accelerator: simulated
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          taints:
+            - key: nvidia.com/gpu
+              value: "present"
+              effect: NoSchedule
